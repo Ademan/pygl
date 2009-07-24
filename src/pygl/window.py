@@ -6,7 +6,7 @@ class Window(object): pass
 class PygameWindow(Window):
     def __init__(self, width, height, bpp=24, depth=16, stencil=0):
         import pygame
-        from pygame.locals import *
+        from pygame import HWSURFACE, OPENGL, DOUBLEBUF
 
         pygame.init()
         self.screen = pygame.display.set_mode((width, height), HWSURFACE|OPENGL|DOUBLEBUF)

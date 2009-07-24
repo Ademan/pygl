@@ -1,0 +1,10 @@
+- Implement major features
+    - Immediate Mode
+     - Coming along nicely, common fixed function... functions, implemented
+    - Textures
+    - Framebuffer Objects
+    - Shader Objects
+    - Vertex Array/Buffer Objects
+- Test programs for different features
+? How to handle mapping between OpenGL/C's types and python's types?  For instance a python float maps to an OpenGL/C double, however that (no pun intended) doubles the storage/bandwidth used.  I would like to choose a default and create a sane method for overriding these mappings.
+? libblas3gf for math routines

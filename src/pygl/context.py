@@ -1,8 +1,8 @@
 from pygl._gl import lib as _gl
 from pygl._gl import GetString
 
-from pygl.constants import GL_MODELVIEW, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT
-from pygl.constants import GL_VERSION
+from pygl.constants import MODELVIEW, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT
+from pygl.constants import VERSION
 
 from pygl.immediate import TrianglesMode, QuadsMode
 from pygl.buffer import ColorBuffer, DepthBuffer
@@ -23,7 +23,7 @@ class Context(object):
     
     @property
     def version(self):
-        return GetString(GL_VERSION).value
+        return GetString(VERSION).value
     @property
     def modelview(self):
         return self._modelview

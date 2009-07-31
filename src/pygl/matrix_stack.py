@@ -1,6 +1,6 @@
 from ctypes import POINTER, c_float, c_double
 
-from pygl.constants import GL_MODELVIEW, GL_PROJECTION
+from pygl.constants import MODELVIEW, PROJECTION
 
 from pygl._gl import lib as _gl
 
@@ -34,8 +34,7 @@ class FixedFunctionMatrixStack(MatrixStack):
         array = _matrixd(values)
         _gl.glLoadMatrixdv(_matrixdp(array))
 
-    #TODO: how to support ctx.stack *= matrix ?
-    def __mul__(self, *args):
+    def __imul__(self, *args):
         values = _norm_args(args)
         array = _matrixd(matrix)
         _gl.glMultMatrixdv(_matrixdp(array))
@@ -43,8 +42,8 @@ class FixedFunctionMatrixStack(MatrixStack):
 
 class ModelviewMatrixStack(FixedFunctionMatrixStack):
     def __init__(self):
-        self.matrix_mode = GL_MODELVIEW
+        self.matrix_mode = MODELVIEW
 
 class ProjectionMatrixStack(FixedFunctionMatrixStack):
     def __init__(self):
-        self.matrix_mode = GL_PROJECTION
+        self.matrix_mode = PROJECTION

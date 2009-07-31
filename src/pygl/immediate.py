@@ -1,6 +1,6 @@
 from pygl._gl import lib as _gl
 
-from pygl.constants import GL_TRIANGLES, GL_QUADS, GL_POINTS
+from pygl.constants import TRIANGLES, QUADS, POINTS
 
 from ctypes import c_int, c_int8, c_int16, c_int32
 from ctypes import c_uint, c_uint8, c_uint16, c_uint32
@@ -124,17 +124,17 @@ class ImmediateMode(object):
 class TrianglesMode(ImmediateMode):
     def __init__(self): self._add_fixed_function()
     def __enter__(self):
-        _gl.glBegin(GL_TRIANGLES)
+        _gl.glBegin(TRIANGLES)
         return self
 
 class QuadsMode(ImmediateMode):
     def __init__(self): self._add_fixed_function()
     def __enter__(self):
-        _gl.glBegin(GL_QUADS)
+        _gl.glBegin(QUADS)
         return self
 
 class QuadsMode(ImmediateMode):
     def __init__(self): self._add_fixed_function()
     def __enter__(self):
-        _gl.glBegin(GL_POINTS)
+        _gl.glBegin(POINTS)
         return self

@@ -4,7 +4,7 @@ from ctypes import c_char_p
 
 from sys import platform
 
-from pygl.constants import GL_EXTENSIONS
+from pygl.constants import EXTENSIONS
 
 lib = None
 
@@ -18,7 +18,7 @@ GetString.argtypes = [GLenum]
 GetString.restype = c_char_p
 
 def _is_extension_supported(name):
-    extension_string = GetString(GL_EXTENSIONS).value
+    extension_string = GetString(EXTENSIONS).value
 
     extensions = extension_string.split()
 

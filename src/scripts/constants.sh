@@ -8,4 +8,4 @@ function read_constants
 }
 
 echo 'from gltypes import GLenum'
-read_constants $1 | sed -re 's/="((0x)?[0-9A-fa-f)"/=GLenum(\1)'
+read_constants $1 | sed -re 's/="((0x)?[0-9A-Fa-f]+)"/=GLenum(\1)/' | sed -e 's/^GL_//'

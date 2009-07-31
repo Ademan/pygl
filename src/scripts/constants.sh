@@ -33,4 +33,6 @@ function retrieve_constants
 #echo 'from ctypes import c_uint'
 #egrep '#define[[:space:]]+GL' $1 | sed -re 's/^#define\s+(GL_[A-Z0-9_]+)\s+(0x[0-9A-Fa-f]+)/\1 = c_uint(\2)/' | grep -v '#define'
 
-get_requests $1
+#get_requests $1
+
+retrieve_constants $1

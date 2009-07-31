@@ -1,7 +1,10 @@
 from ctypes import CDLL
 from ctypes.util import find_library
+from ctypes import c_char_p
 
 from sys import platform
+
+from pygl.constants import GL_EXTENSIONS
 
 lib = None
 
@@ -9,3 +12,36 @@ if 'linux' in platform:
     lib = CDLL(find_library('GL'))
 elif platform == 'win32':
     raise RuntimeError('No')
+
+GetString = lib.glGetString
+GetString.argtypes = [GLenum]
+GetString.restype = c_char_p
+
+def _is_extension_supported(name):
+    extension_string = GetString(GL_EXTENSIONS).value
+
+    extensions = extension_string.split()
+
+    if name in extensions: return True
+
+    return False
+    
+
+class ExtensionError(RuntimeError): pass
+
+class Extension(object):
+    def __init__(self, name, symbols):
+        if not _is_extension_supported(name):
+            raise ExtensionError('Extension \'%s\' not supported.' % name)
+        self.name = name
+
+        for name, symbol in symbols:
+            setattr(self, name, getattr(lib, symbol))
+
+class Extensions(Extension):
+    def __init__(self, extensions):
+        for name, symbols in extensions:
+            try:
+                Extension.__init__(self, name, symbols)
+                break
+            except ExtensionError: continue

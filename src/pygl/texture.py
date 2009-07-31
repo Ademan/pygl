@@ -6,8 +6,10 @@ from ctypes import c_uint8, c_uint16, c_uint32
 from ctypes import c_float
 
 from ctypes import c_uint32 as GLenum #FIXME: use globally? use at all?
+from ctypes import c_uint32 as GLuint
 import ctypes
 
+from pygl.constants import GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D
 from pygl.constants import GL_TEXTURE_2D, GL_TEXTURE0, GL_MAX_TEXTURE_UNITS
 from pygl.constants import GL_UNSIGNED_BYTE, GL_BYTE
 from pygl.constants import GL_UNSIGNED_SHORT, GL_SHORT
@@ -22,18 +24,86 @@ from pygl.util import _get_integer
 #TODO: including faces of cube maps, etc?
 
 def _gen_texture():
-    texture = c_uint()
+    texture = GLuint() #TODO: GLuint ?
     _gl.glGenTextures(1, POINTER(texture))
     return texture
 
+#TODO: is this reliable?
+def _query_from_binding(binding):
+    return GLuint(binding + 0x7288)
+
+class PreserveTextureBinding(object):
+    def __init__(self, texture):
+        self.texture = texture
+        self.old_texture = GLuint(0)
+    def __enter__(self):
+        _gl.glGetIntegerv(_query_from_binding(self.binding), POINTER(self.old_texture))
+        _gl.glBindTexture(self.binding, self.texture._texture)
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _gl.glBindTexture(self.binding, self.old_texture)
+
+class TextureParameter(object):
+    def __init__(self, parameter):
+        self._parameter = parameter
+
+    def _get_texture(self, instance):
+        return instance
+
+    def __get__(self, instance, owner):
+        texture = self._get_texture(instance)
+        result = GLuint(0)
+        with PreserveTextureBinding(texture):
+            _gl.glGetTexParameteriv(texture._binding, self._parameter, POINTER(result))
+        return result.value
+
+    def __set__(self, instance, value):
+        texture = self._get_texture(instance)
+        with PreserveTextureBinding(texture):
+            _gl.glTexParameteri(self._parameter, GLuint(value))
+
+class NestedTextureParameter(TextureParameter):
+    def _get_texture(self, instance):
+        return instance._texture
+
+class Filter(object):
+    min = NestedTextureParameter(GL_TEXTURE_MIN_FILTER)
+    mag = NestedTextureParameter(GL_TEXTURE_MAG_FILTER)
+    def __init__(self, texture):
+        self._texture = texture
+
+class WrapMode(object):
+    s = NestedTextureParameter(GL_TEXTURE_WRAP_S)
+    t = NestedTextureParameter(GL_TEXTURE_WRAP_T)
+    def __init__(self, texture):
+        self._texture = texture
+
 class Texture(object):
+    def __init__(self):
+        self.filter = Filter(self)
+        self.wrap = WrapMode(self)
     def _unit_enum(self):
         return c_uint(GL_TEXTURE0 + self._unit)
     def enable(self):  _gl.glEnable(self._unit_enum())
     def disable(self): _gl.glDisable(self._unit_enum())
-    def _bind(self, _unit):
+
+    #FIXME: is this really a decent way to handle these properties?
+    @property
+    def filter(self):
+        if not hasattr(self, '_filter')
+            self._filter = Filter(self)
+        return self._filter
+
+    @property
+    def wrap(self):
+        if not hasattr(self, '_wrap')
+            self._wrap = WrapMode(self)
+        return self._wrap
+
+    def _set_unit(self, unit):
         self._unit = _unit
         _gl.glActiveTexture(self._unit_enum())
+
+    def _bind(self):
         _gl.glBindTexture(self._binding, self._texture)
 
 #FIXME: make sure data mapping is correct
@@ -62,7 +132,7 @@ class TextureImage(object):
                          c_uint(self.storage),
                          c_uint(self.width), c_uint(self.height),
                          c_int(self.border),
-                         c_uint(self.format), GL_BYTES, #FIXME: don't hardcore bytes 
+                         c_uint(self.format), GL_BYTES, #FIXME: don't hardcode bytes 
                          bytestream(self.data)) #FIXME: make pointer out of data
     
 #TODO: rename class, make Texture2D directly correspond with GL_TEXTURE_2D binding
@@ -72,34 +142,44 @@ class Texture2D(Texture):
         self._unit = None
         self._binding = GL_TEXTURE_2D
         self._image = None
+
     @property
     def image(self): return self._image
 
     @image.setter
     def image(self, image):
-        #FIXME: save prior binding, use open texture unit?
-        #FIXME: use DSA?
-        self.bind(0)
-        self._image = image
-        self._image.submit(self.binding)
-        #FIXME: self.unbind()
+        with PreserveTextureBinding(self):
+            self._bind()
+            self._image = image
+            self._image.submit(self._binding)
 
     def bind(self, _unit): 
         if self._unit:
             self.unbind() #TODO: any reason why you *couldn't* bind the same texture to multiple _units?
-        self._bind(_unit)
+                          #TODO: reasons why you *shouldn't* are probably abundant though
+        self._set_unit(_unit)
+        self._bind()
 
     #FIXME: remove?
     def unbind(self):
         _gl.glActiveTexture(self._unit_enum())
-        _gl.glBindTexture(GL_TEXTURE_2D, c_uint(0))
+        _gl.glBindTexture(self._binding, c_uint(0))
         self._unit = None       
 
 class TexturePlaceholder(Texture):
     def __init__(self, unit):
         self._unit = unit
         self._texture = 0
-    def bind(self, unit): self._bind(unit)
+    def bind(self, unit):
+        #FIXME: should I really clear everything like this?
+        self._binding = GL_TEXTURE_1D
+        self._bind(unit)
+
+        self._binding = GL_TEXTURE_2D
+        self._bind(unit)
+
+        self._binding = GL_TEXTURE_3D
+        self._bind(unit)
 
 class Textures(object):
     def __init__(self):
@@ -117,8 +197,8 @@ class Textures(object):
 
     def __setitem__(self, index, value):
         if value is None:
+            self._textures[index].
             self._textures[index] = TexturePlaceholder(i)
-            self._textures[index].bind(index)
         else:
             self._textures[index] = value
 

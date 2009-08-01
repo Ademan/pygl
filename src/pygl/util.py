@@ -7,7 +7,7 @@ def _norm_args(*args):
         args = args[0]
     return args
 
-def _get_integer(flag):
+def _get_integer(flag): #FIXME: should this even exist?
     result = c_uint(0)
     _gl.glGetIntegerv(c_uint(flag), POINTER(result))
-    return int(result)
+    return result.value

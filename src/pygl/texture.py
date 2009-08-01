@@ -8,6 +8,8 @@ from ctypes import c_float
 
 from pygl.gltypes import GLenum, GLuint
 
+from pygl.constants import TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER
+from pygl.constants import TEXTURE_WRAP_S, TEXTURE_WRAP_T
 from pygl.constants import TEXTURE_1D, TEXTURE_2D, TEXTURE_3D
 from pygl.constants import TEXTURE_2D, TEXTURE0, MAX_TEXTURE_UNITS
 from pygl.constants import UNSIGNED_BYTE, BYTE
@@ -75,13 +77,13 @@ class Texture(object):
     #FIXME: is this really a decent way to handle these properties?
     @property
     def filter(self):
-        if not hasattr(self, '_filter')
+        if not hasattr(self, '_filter'):
             self._filter = Filter(self)
         return self._filter
 
     @property
     def wrap(self):
-        if not hasattr(self, '_wrap')
+        if not hasattr(self, '_wrap'):
             self._wrap = WrapMode(self)
         return self._wrap
 
@@ -184,7 +186,7 @@ class Textures(object):
 
     def __setitem__(self, index, value):
         if value is None:
-            self._textures[index].
+            #self._textures[index].
             self._textures[index] = TexturePlaceholder(index)
         else:
             self._textures[index] = value

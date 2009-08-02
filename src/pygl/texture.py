@@ -71,21 +71,9 @@ class Texture(object):
         self.wrap = WrapMode(self)
     def _unit_enum(self):
         return c_uint(TEXTURE0 + self._unit)
+
     def enable(self):  _gl.glEnable(self._unit_enum())
     def disable(self): _gl.glDisable(self._unit_enum())
-
-    #FIXME: is this really a decent way to handle these properties?
-    @property
-    def filter(self):
-        if not hasattr(self, '_filter'):
-            self._filter = Filter(self)
-        return self._filter
-
-    @property
-    def wrap(self):
-        if not hasattr(self, '_wrap'):
-            self._wrap = WrapMode(self)
-        return self._wrap
 
     def _set_unit(self, unit):
         self._unit = _unit
@@ -150,25 +138,18 @@ class Texture2D(Texture):
     #FIXME: remove?
     def unbind(self):
         _gl.glActiveTexture(self._unit_enum())
-        _gl.glBindTexture(self._binding, c_uint(0))
+        _gl.glBindTexture(self._binding, GLuint(0))
         self._unit = None       
 
 class TexturePlaceholder(Texture):
-    def __init__(self, unit):
+    def __init__(self, unit, binding):
         self._unit = unit
         self._texture = 0
-    def bind(self, unit):
-        #FIXME: should I really clear everything like this?
-        #TODO: if I should, need to bind to TEXTURE_CUBE_MAP as well
+        self._binding = binding
+    def bind(self):
         self._set_unit(self.unit)
-        self._binding = TEXTURE_1D
         self._bind()
-
-        self._binding = TEXTURE_2D
-        self._bind()
-
-        self._binding = TEXTURE_3D
-        self._bind()
+        del self._binding #should get rid of _binding attr so that future placeholders won't do useless work
 
 class Textures(object):
     def __init__(self):
@@ -179,6 +160,7 @@ class Textures(object):
     def enable(self):
         #FIXME: enable more types?
         #FIXME: require explicit enable? ie: enable_cubemap() etc?
+        #TODO: does this affect programmable pipeline?
         _gl.glEnable(TEXTURE_2D)
 
     def __getitem__(self, index):
@@ -186,9 +168,12 @@ class Textures(object):
 
     def __setitem__(self, index, value):
         if value is None:
-            #self._textures[index].
-            self._textures[index] = TexturePlaceholder(index)
+            try:
+                binding = self._textures[index]._binding
+                self._textures[index] = TexturePlaceholder(index, binding)
+            except AttributeError:
+                self._textures[index] = TexturePlaceholder(index, None)
         else:
             self._textures[index] = value
 
-        value.bind(index)
+        self._textures[index].bind(index)

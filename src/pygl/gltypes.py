@@ -13,6 +13,8 @@ from ctypes import c_uint32 as GLuint
 from ctypes import c_float as GLfloat
 from ctypes import c_double as GLdouble
 
+from ctypes import c_char as GLchar
+
 _gl_type_symbols = {
     GLint8: 'b',
     GLint16: 's',

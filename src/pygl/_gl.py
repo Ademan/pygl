@@ -33,7 +33,7 @@ class ExtensionError(RuntimeError): pass
 
 class Extension(object):
     def __init__(self, name, symbols):
-        if not _is_extension_supported(name):
+        if not _is_extension_supported(name) and name:
             raise ExtensionError('Extension \'%s\' not supported.' % name)
         self.name = name
 
@@ -42,7 +42,7 @@ class Extension(object):
 
 class Extensions(Extension):
     def __init__(self, extensions):
-        for name, symbols in extensions:
+        for name, symbols in extensions.iteritems():
             try:
                 Extension.__init__(self, name, symbols)
                 break

@@ -56,3 +56,7 @@ _c_numeric_types = {
 #TODO: working on python types would probably be easiest and best
 _accuracy = [[GLuint8, GLint8], [GLuint16, GLint16], [GLuint32, GLint32], [GLfloat], [GLdouble]]
 def coerce(args): pass
+
+from ctypes import c_void_p
+
+NULL = c_void_p(0)

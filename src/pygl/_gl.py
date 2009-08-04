@@ -38,9 +38,12 @@ class Extension(object):
         self.name = name
 
         for name, symbol in symbols:
-            setattr(self, name, getattr(lib, symbol))
+            f = getattr(lib, symbol[0])
+            f.argtypes = symbol[1]
+            f.restype = symbol[2]
+            setattr(self, name, f)
 
-class Extensions(Extension):
+class Functionality(object):
     def __init__(self, extensions):
         for name, symbols in extensions.iteritems():
             try:

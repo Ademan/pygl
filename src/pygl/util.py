@@ -11,3 +11,12 @@ def _get_integer(flag): #FIXME: should this even exist?
     result = c_uint(0)
     _gl.glGetIntegerv(c_uint(flag), POINTER(result))
     return result.value
+
+def _split_enum_name(name):
+    return name.split('_')
+
+def _cap_word(word):
+    return ''.join([word[0].upper(), word[1:])
+
+def _cap_name(name):
+    return ''.join(map(_cap_word, name))

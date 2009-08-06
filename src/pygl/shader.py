@@ -71,6 +71,8 @@ GetProgramiv = program.GetProgramiv
 GetProgramInfoLog = program.GetProgramInfoLog
 GetActiveAttrib = program.GetActiveAttrib
 GetAttribLocation = program.GetAttribLocation
+
+GetActiveUniform = program.GetActiveUniform
 GetUniformLocation = program.GetUniformLocation
 
 def _get_info_log(getter):
@@ -195,14 +197,16 @@ class ProgramVariables(object):
         namelen = GLsizei(0)
         attrib_size = GLint(0)
         type = GLenum(0)
+
+        name = create_string_buffer('', self._max_name_length())
         
         self._get_variable(self._program._object,
                         GLuint(index),
-                        GLsizei(self._max_name_length),
-                        POINTER(namelen),
-                        POINTER(attrib_size),
-                        POINTER(type),
-                        POINTER(name)
+                        GLsizei(self._max_name_length()),
+                        namelen,
+                        attrib_size,
+                        type,
+                        name
                        )
 
         return name.value, type, attrib_size.value
@@ -212,7 +216,7 @@ class ProgramVariables(object):
             print "%s:" % name
             print "\ttype: %d" % info[0].value
             print "\tsize: %d" % info[1]
-            print "\tlocation: %d" % info[3]
+            print "\tlocation: %d" % info[2]
 
     def _get_all(self):
         self._variables = {}
@@ -225,6 +229,7 @@ class ProgramVariables(object):
         
 
 class ProgramAttributes(ProgramVariables):
+    _get_variable = GetActiveAttrib
     _get_location = GetAttribLocation
     def _get_variable_count(self):
         return self._program.active_attributes
@@ -232,6 +237,7 @@ class ProgramAttributes(ProgramVariables):
         return self._program.active_attribute_max_length
 
 class ProgramUniforms(ProgramVariables):
+    _get_variable = GetActiveUniform
     _get_location = GetUniformLocation
     def _get_variable_count(self):
         return self._program.active_uniforms
@@ -253,6 +259,8 @@ class Program(object):
 
     def link(self):
         LinkProgram(self._object)
+        self._attribs = ProgramAttributes(self)
+        self._uniforms = ProgramUniforms(self)
 
     def use(self):
         UseProgram(self._object)

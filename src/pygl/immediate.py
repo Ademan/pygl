@@ -87,6 +87,7 @@ class ImmediateMode(object):
 
     def __enter__(self):
         _gl.glBegin(self._mode)
+        return self
     def __exit__(self, exc_type, exc_val, exc_tb):
         _gl.glEnd()
 

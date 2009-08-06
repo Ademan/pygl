@@ -4,7 +4,7 @@ from pygl._gl import GetString
 from pygl.constants import MODELVIEW, COLOR_BUFFER_BIT, DEPTH_BUFFER_BIT
 from pygl.constants import VERSION
 
-from pygl.immediate import TrianglesMode, QuadsMode
+from pygl.immediate import TrianglesMode, QuadsMode, PointsMode
 from pygl.buffer import ColorBuffer, DepthBuffer
 
 from pygl.matrix_stack import ModelviewMatrixStack, ProjectionMatrixStack
@@ -18,6 +18,7 @@ class Context(object):
 
     def triangles(self):
         return TrianglesMode()
+
     def quads(self):
         return QuadsMode()
     

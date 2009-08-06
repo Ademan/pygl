@@ -1,5 +1,4 @@
 from ctypes import c_uint32 as GLenum
-from ctypes import c_uint32 as GLtexture
 
 from ctypes import c_int8 as GLbyte
 from ctypes import c_uint8 as GLubyte
@@ -15,15 +14,15 @@ from ctypes import c_double as GLdouble
 
 from ctypes import c_char as GLchar
 
+from ctypes import c_uint32 as GLsizei #FIXME: correct size?
+
 _gl_type_symbols = {
-    GLint8: 'b',
-    GLint16: 's',
-    GLint32: 'i',
+    GLbyte: 'b',
+    GLshort: 's',
     GLint: 'i',
 
-    GLuint8: 'ub',
-    GLuint16: 'us',
-    GLuint: 'ui',
+    GLubyte: 'ub',
+    GLushort: 'us',
     GLuint: 'ui',
 
     GLdouble: 'd',
@@ -54,7 +53,7 @@ _c_numeric_types = {
 
 #TODO: implement, decide whether it works on python types or ctypes and so on
 #TODO: working on python types would probably be easiest and best
-_accuracy = [[GLuint8, GLint8], [GLuint16, GLint16], [GLuint32, GLint32], [GLfloat], [GLdouble]]
+_accuracy = [[GLubyte, GLbyte], [GLushort, GLshort], [GLuint, GLint], [GLfloat], [GLdouble]]
 def coerce(args): pass
 
 from ctypes import c_void_p

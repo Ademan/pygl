@@ -20,7 +20,7 @@ GetString.argtypes = [GLenum]
 GetString.restype = c_char_p
 
 def _is_extension_supported(name):
-    extension_string = GetString(EXTENSIONS).value
+    extension_string = GetString(EXTENSIONS)
 
     extensions = extension_string.split()
 
@@ -37,13 +37,13 @@ class Extension(object):
             raise ExtensionError('Extension \'%s\' not supported.' % name)
         self.name = name
 
-        for name, symbol in symbols:
+        for name, symbol in symbols.iteritems():
             f = getattr(lib, symbol[0])
             f.argtypes = symbol[1]
             f.restype = symbol[2]
             setattr(self, name, f)
 
-class Functionality(object):
+class Functionality(Extension):
     def __init__(self, extensions):
         for name, symbols in extensions.iteritems():
             try:

@@ -9,12 +9,21 @@ from pygl.buffer import ColorBuffer, DepthBuffer
 
 from pygl.matrix_stack import ModelviewMatrixStack, ProjectionMatrixStack
 
+Enable = _gl.glEnable
+Disable = _gl.glDisable
+
 class Context(object):
     def __init__(self):
         self._modelview = ModelviewMatrixStack()
         self._projection = ProjectionMatrixStack()
         self._color = ColorBuffer()
         self._depth = DepthBuffer()
+
+    def enable(self, enum):
+        Enable(enum)
+
+    def disable(self, enum):
+        Disable(enum)
 
     def triangles(self):
         return TrianglesMode()

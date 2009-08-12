@@ -2,7 +2,6 @@ from ctypes import CDLL
 from ctypes.util import find_library
 from ctypes import c_char_p
 
-
 from sys import platform
 
 from pygl.constants import EXTENSIONS

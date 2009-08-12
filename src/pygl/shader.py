@@ -3,6 +3,7 @@ from pygl.gltypes import GLint, GLuint
 from pygl.gltypes import GLchar
 from pygl.gltypes import GLsizei
 from pygl.gltypes import NULL
+import pygl
 
 #FIXME: stop using POINTER(GLchar) except for buffer construction?
 #FIXME: possible if c_str(POINTER((GLchar * size)())) is valid
@@ -189,11 +190,54 @@ class AttachedShaders(object):
         DetachShader(self._program._object,
                      shader._object)
 
+class ProgramVariable(object):
+    def __init__(self, type, size):
+        self.type = type
+        self.size = size
+
+class Attribute(ProgramVariable):
+    def __call__(self, *args): pass
+        #Attribute3f(args) #TODO
+
+#FIXME: what represents the "preferred" vector? 1x3 or 3x1?
+#FIXME: or does opengl switch between column and row vectors
+#FIXME: as needed?
+_numeric_variable_types = {float: [(1,1), (1, 2), (1,3), (1,4),
+                           (2,2), (3, 3), (4,4)],
+                   int:   [(1,1), (1, 2), (1,3), (1,4)],
+                   bool:  [(1,1), (1, 2), (1,3), (1,4)]}
+
+_names = {float: "FLOAT",
+          int:   "INT",
+          bool:  "BOOL"}
+
+_variable_types = {}
+for type, sizes in _numeric_variable_types.iteritems():
+    for size in sizes:
+        if size[1] == 1:
+            constant_name = _names[type]
+        else:
+            constant_name = "%(name)s_%(type)s%(size)d" % {
+                                                      'name': _names[type],
+                                                      'type': 'VEC' if size[0] == 1 else 'MAT',
+                                                      'size': size[1]
+                                                     }
+        constant = getattr(pygl.constants, constant_name).value
+        _variable_types[constant] = ProgramVariable(type, size)
+
 class ProgramVariables(object):
+    #FIXME: other types exist (nonsquare matrices)
+    _variable_types = ['FLOAT', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4',
+                       'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4',
+                       'BOOL', 'BOOL_VEC2', 'BOOL_VEC3', 'BOOL_VEC4',
+                       'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4',
+                       'SAMPLER_1D', 'SAMPLER_2D', 'SAMPLER_3D',
+                       'SAMPLER_CUBE',
+                       'SAMPLER_1D_SHADOW', 'SAMPLER_2D_SHADOW']
     def __init__(self, program):
         self._program = program
         self._get_all()
-    def _get(self, index):
+    def _get_info(self, index):
         namelen = GLsizei(0)
         attrib_size = GLint(0)
         type = GLenum(0)
@@ -221,12 +265,19 @@ class ProgramVariables(object):
     def _get_all(self):
         self._variables = {}
         for index in xrange(0, self._get_variable_count()):
-            name, type, size = self._get(index)
+            name, type, size = self._get_info(index)
             self._variables[name] = (type, size,
                                      self._get_location(self._program._object, c_str(name))) #TODO: c_str necessary?
-    def __getitem__(self, index): pass #TODO: getuniform/getattrib
-    def __setitem__(self, index, value): pass
-        
+    def __getitem__(self, name): pass #TODO: getuniform/getattrib
+
+    def _set_variable(self, location, value): pass
+        #TODO: how to handle this?!?
+        #TODO: check for _n _m and _data?
+        #TODO: seems a bit magical, but would make everything easier to use
+
+    def __setitem__(self, name, value):
+        location = self._variables[name][2]
+        self._set_variable(location, value)
 
 class ProgramAttributes(ProgramVariables):
     _get_variable = GetActiveAttrib

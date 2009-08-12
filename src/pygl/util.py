@@ -1,3 +1,4 @@
+from pygl.gltypes import GLdouble
 from pygl._gl import lib as _gl
 
 from ctypes import c_uint, POINTER
@@ -20,3 +21,9 @@ def _cap_word(word):
 
 def _cap_name(name):
     return ''.join(map(_cap_word, name))
+
+Rotate = _gl.glRotated
+Rotate.argtypes = [GLdouble] * 4
+
+Translate = _gl.glTranslated
+Translate.argtypes = [GLdouble] * 3

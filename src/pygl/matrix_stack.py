@@ -18,7 +18,7 @@ class FixedFunctionMatrixStack(MatrixStack):
     def _set_mode(self):
         #TODO: query old mode?
         #TODO: optional direct state access?
-        _gl.glMatrixMode(self.matrix_mode)
+        _gl.glMatrixMode(self._matrix_mode)
 
     def push(self):
         self._set_mode()
@@ -40,10 +40,13 @@ class FixedFunctionMatrixStack(MatrixStack):
         _gl.glMultMatrixdv(_matrixdp(array))
         return self
 
+    def __enter__(self):
+        self._set_mode()
+
+    def __exit__(self, exc_type, exc_val, exc_tb): pass
+
 class ModelviewMatrixStack(FixedFunctionMatrixStack):
-    def __init__(self):
-        self.matrix_mode = MODELVIEW
+        _matrix_mode = MODELVIEW
 
 class ProjectionMatrixStack(FixedFunctionMatrixStack):
-    def __init__(self):
-        self.matrix_mode = PROJECTION
+        _matrix_mode = PROJECTION

@@ -1,28 +1,20 @@
 #! /usr/bin/env python
-import pygl
-import pygame
-
 from time import clock
 
+import pygame
 from pygame.locals import *
+
+import pygl
+from pygl.shader import VertexShader, FragmentShader, Program
+
+from pygl.constants import DEPTH_TEST
+
+from pygl.glu import Perspective
+from pygl.util import Translate, Rotate
 
 window = pygl.window.PygameWindow(640, 480)
 
 gl = window.context
-
-#FIXME: workaround so that components can at least be imported before
-#FIXME: the context is created
-
-from pygl.shader import VertexShader, FragmentShader, Program
-from pygl.glerror import _check_errors
-
-from pygl.constants import DEPTH_TEST
-
-#FIXME: don't interact with glu ideally
-from pygl.glu import Perspective
-
-#FIXME: eliminate these?
-from pygl.util import Translate, Rotate
 
 def draw_triangle(gl):
     with gl.triangles() as t:
@@ -116,20 +108,22 @@ varying vec3 light;
 
 void main(void)
 {
+    f
     gl_FragColor = vec4(
                         dot(normalize(light), normalize(normal)) * diffuse,
                        1.0);
 }
 """]
 
-vs.compile()
-print "Vertex Shader log:", vs.log
-fs.compile()
-print "Fragment Shader log:", fs.log
+if not vs.compile():
+    print "Vertex Shader log:", vs.log
+
+if not fs.compile():
+    print "Fragment Shader log:", fs.log
 
 program.shaders.extend([vs, fs])
-program.link()
-print "Program log:", program.log
+if not program.link():
+    print "Program log:", program.log
 
 print "Uniforms:"
 program.uniforms._dump()
@@ -137,7 +131,9 @@ program.uniforms._dump()
 print "Attributes:"
 program.attribs._dump()
 
-program.use()
+if not program.use():
+    print "Program log:", program.log
+
 gl.enable(DEPTH_TEST)
 
 with gl.projection: Perspective(45.0, 640.0 / 480.0, 1.0, 100.0)

@@ -32,9 +32,10 @@ class ExtensionError(RuntimeError): pass
 
 class Extension(object):
     def __init__(self, name, symbols):
-        if not _is_extension_supported(name) and name:
-            raise ExtensionError('Extension \'%s\' not supported.' % name)
-        self.name = name
+        if not name == '':
+            if not _is_extension_supported(name):
+                raise ExtensionError('Extension \'%s\' not supported.' % name)
+            self.name = name
 
         for name, symbol in symbols.iteritems():
             f = getattr(lib, symbol[0])

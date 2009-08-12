@@ -1,10 +1,3 @@
-from pygl.gltypes import GLenum
-from pygl.gltypes import GLint, GLuint
-from pygl.gltypes import GLchar
-from pygl.gltypes import GLsizei
-from pygl.gltypes import NULL
-import pygl
-
 #FIXME: stop using POINTER(GLchar) except for buffer construction?
 #FIXME: possible if c_str(POINTER((GLchar * size)())) is valid
 from ctypes import c_char_p as c_str
@@ -13,12 +6,20 @@ from ctypes import addressof
 from ctypes import create_string_buffer
 from ctypes import cast
 
+from pygl.gltypes import GLenum
+from pygl.gltypes import GLint, GLuint
+from pygl.gltypes import GLchar
+from pygl.gltypes import GLsizei
+from pygl.gltypes import NULL
+import pygl
+
 from pygl.constants import VERTEX_SHADER, FRAGMENT_SHADER
 
 from pygl._gl import Functionality
 
 from pygl.util import _split_enum_name, _cap_name
 
+from pygl.glerror import _check_errors
 
 shader = Functionality({
                       '': {
@@ -102,7 +103,6 @@ class ObjectProperty(object):
         return self._convert(value.value)
     def __set__(self, program, value): pass
 
-#TODO: run _add_properties on class rather than instances?
 def _add_properties(object, getter, properties):
     for type, properties in properties.iteritems():
         for property in properties:
@@ -147,6 +147,8 @@ class Shader(object):
 
     def compile(self):
         CompileShader(self._object)
+        _check_errors()
+        return self.compile_status
 
     @property
     def sources(self): pass
@@ -165,6 +167,7 @@ class Shader(object):
                      c_str_array,
                      cast(NULL, POINTER(GLuint))
                     )
+        _check_errors()
 
 class VertexShader(Shader):
     _shader_type = VERTEX_SHADER
@@ -181,14 +184,17 @@ class AttachedShaders(object):
         self._shaders.append(shader)
 
         AttachShader(self._program._object, shader._object)
+        _check_errors()
 
     def extend(self, shaders):
         self._shaders.extend(shaders)
         for shader in shaders:
             AttachShader(self._program._object, shader._object)
+
     def remove(self, shader):
         DetachShader(self._program._object,
                      shader._object)
+        _check_errors()
 
 class ProgramVariable(object):
     def __init__(self, type, size):
@@ -268,6 +274,7 @@ class ProgramVariables(object):
             name, type, size = self._get_info(index)
             self._variables[name] = (type, size,
                                      self._get_location(self._program._object, c_str(name))) #TODO: c_str necessary?
+
     def __getitem__(self, name): pass #TODO: getuniform/getattrib
 
     def _set_variable(self, location, value): pass
@@ -310,11 +317,15 @@ class Program(object):
 
     def link(self):
         LinkProgram(self._object)
+        _check_errors()
+
         self._attribs = ProgramAttributes(self)
         self._uniforms = ProgramUniforms(self)
+        return self.link_status
 
     def use(self):
         UseProgram(self._object)
+        _check_errors()
 
     @property
     def attribs(self): return self._attribs

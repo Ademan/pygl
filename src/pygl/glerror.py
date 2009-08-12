@@ -46,3 +46,9 @@ def _check_errors():
         raise _errors[error]() #FIXME: make the tracebacks longer, don't need to report the error reporting...
     except KeyError:
         pass # either means NO_ERROR or an error we don't have an exception for
+
+def _wrap_errors(f):
+    def _checked_f(*args, **kwargs):
+        f(*args, **kwargs)
+        _check_errors()
+    return _wrapped

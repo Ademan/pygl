@@ -51,6 +51,7 @@ program = Functionality({
                             'CreateProgram': ('glCreateProgram', [], GLuint),
                             'AttachShader':  ('glAttachShader', [GLuint, GLuint], None),
                             'LinkProgram':   ('glLinkProgram', [GLuint], None),
+                            'ValidateProgram': ('glValidateProgram', [GLuint], None),
                             'UseProgram':    ('glUseProgram', [GLuint], None),
                             'DeleteProgram': ('glDeleteProgram', [GLuint], None),
                             'GetProgramiv':    ('glGetProgramiv', [GLuint, GLenum, POINTER(GLint)], None),
@@ -66,6 +67,7 @@ program = Functionality({
 CreateProgram = program.CreateProgram
 AttachShader = program.AttachShader
 LinkProgram = program.LinkProgram
+ValidateProgram = program.ValidateProgram
 UseProgram = program.UseProgram
 DeleteProgram = program.DeleteProgram
 
@@ -322,6 +324,10 @@ class Program(object):
         self._attribs = ProgramAttributes(self)
         self._uniforms = ProgramUniforms(self)
         return self.link_status
+
+    def validate(self):
+        ValidateProgram(self._object)
+        return self.validate_status
 
     def use(self):
         UseProgram(self._object)

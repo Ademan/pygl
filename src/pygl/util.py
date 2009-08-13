@@ -27,3 +27,6 @@ Rotate.argtypes = [GLdouble] * 4
 
 Translate = _gl.glTranslated
 Translate.argtypes = [GLdouble] * 3
+
+Scale = _gl.glScaled
+Scale.argtypes = [GLdouble] * 3

@@ -9,8 +9,16 @@ from pygl.buffer import ColorBuffer, DepthBuffer
 
 from pygl.matrix_stack import ModelviewMatrixStack, ProjectionMatrixStack
 
+from pygl.texture import Textures
+from pygl.util import _get_integer
+
+from pygl.gltypes import GLenum
+
 Enable = _gl.glEnable
+Enable.argtypes = [GLenum]
+
 Disable = _gl.glDisable
+Disable.argtypes = [GLenum]
 
 class Context(object):
     def __init__(self):
@@ -18,6 +26,7 @@ class Context(object):
         self._projection = ProjectionMatrixStack()
         self._color = ColorBuffer()
         self._depth = DepthBuffer()
+        self._textures = Textures()
 
     def enable(self, enum):
         Enable(enum)
@@ -32,11 +41,16 @@ class Context(object):
         return QuadsMode()
     
     @property
+    def textures(self): return self._textures
+
+    @property
     def version(self):
         return GetString(VERSION).value
+
     @property
     def modelview(self):
         return self._modelview
+
     @modelview.setter
     def modelview(self, value):
         if value != self._modelview:
@@ -45,6 +59,7 @@ class Context(object):
     @property
     def projection(self):
         return self._projection
+
     @projection.setter
     def projection(self, value):
         if value != self._modelview:

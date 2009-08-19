@@ -64,6 +64,14 @@ program = Functionality({
                         },
                         })
 
+uniform = Functionality({
+                    '': {
+                            'Uniform1i': ('glUniform1i', [GLuint, GLint], None),
+                        }
+                       })
+
+Uniform1i = uniform.Uniform1i
+
 CreateProgram = program.CreateProgram
 AttachShader = program.AttachShader
 LinkProgram = program.LinkProgram
@@ -199,13 +207,20 @@ class AttachedShaders(object):
         _check_errors()
 
 class ProgramVariable(object):
-    def __init__(self, type, size):
-        self.type = type
-        self.size = size
+    def __init__(self, location, type, size):
+        self._location = location
+        self._type = type
+        self._size = size
+
+class Sampler(ProgramVariable):
+    def _set(self, value):
+        try:
+            Uniform1i(self._location, value._unit)
+        except AttributeError:
+            Uniform1i(self._location, GLuint(value))
 
 class Attribute(ProgramVariable):
     def __call__(self, *args): pass
-        #Attribute3f(args) #TODO
 
 #FIXME: what represents the "preferred" vector? 1x3 or 3x1?
 #FIXME: or does opengl switch between column and row vectors
@@ -231,7 +246,8 @@ for type, sizes in _numeric_variable_types.iteritems():
                                                       'size': size[1]
                                                      }
         constant = getattr(pygl.constants, constant_name).value
-        _variable_types[constant] = ProgramVariable(type, size)
+        #FIXME
+        #_variable_types[constant] = ProgramVariable(type, size)
 
 class ProgramVariables(object):
     #FIXME: other types exist (nonsquare matrices)

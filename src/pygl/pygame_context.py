@@ -12,7 +12,7 @@ class PygameContext(Context):
 from pygl.texture import TextureImage
 
 #FIXME: don't name sdl_image ?
-def sdl_image(path):
+def load_image(path):
     #TODO: image loading code
     surface = pygame.image.load(path)
 
@@ -24,4 +24,4 @@ def sdl_image(path):
     buffer = surface.get_buffer()
 
     image = TextureImage(width, height, buffer) #FIXME: buffer needs to be transformed!
-    return texture_image
+    return image

@@ -42,6 +42,7 @@ _errors = {
 
 def _check_errors():
     error = GetError()
+    #print "Error: ", str(error)
     try:
         raise _errors[error]() #FIXME: make the tracebacks longer, don't need to report the error reporting...
     except KeyError:

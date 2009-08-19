@@ -50,3 +50,12 @@ class Functionality(Extension):
                 Extension.__init__(self, name, symbols)
                 break
             except ExtensionError: continue
+
+def function(name, argtypes, restype=None, names=["gl%(name)s", "gl%(name)sARB", "gl%(name)sEXT"]):
+    for symbol in [name_format % {'name': name} for name_format in names]:
+        try:
+            f = getattr(lib, symbol)
+            f.argtypes = argtypes
+            f.restype = restype
+            return f
+        except AttributeError: continue

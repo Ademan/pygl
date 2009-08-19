@@ -5,6 +5,7 @@ from ctypes import c_uint, POINTER
 from ctypes import c_int8, c_int16, c_int32
 from ctypes import c_uint8, c_uint16, c_uint32
 from ctypes import c_float
+from ctypes import c_void_p
 
 from pygl.gltypes import GLenum, GLuint
 
@@ -12,6 +13,8 @@ from pygl.constants import TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER
 from pygl.constants import TEXTURE_WRAP_S, TEXTURE_WRAP_T
 from pygl.constants import TEXTURE_1D, TEXTURE_2D, TEXTURE_3D
 from pygl.constants import TEXTURE_2D, TEXTURE0, MAX_TEXTURE_UNITS
+from pygl.constants import MAX_COMBINED_TEXTURE_IMAGE_UNITS
+from pygl.constants import MAX_TEXTURE_COORDS
 from pygl.constants import UNSIGNED_BYTE, BYTE
 from pygl.constants import UNSIGNED_SHORT, SHORT
 from pygl.constants import UNSIGNED_INT, INT
@@ -21,12 +24,22 @@ from pygl.constants import RGBA as RGBA
 
 from pygl.util import _get_integer
 
+from pygl.glerror import _check_errors
+
+from pygl.gltypes import GLsizei, GLuint
+from pygl.gltypes import GLint
+
+from pygl.state import PreserveTextureBinding
+
 #TODO: make TextureImage class or something to generically handle 2d texture images?
 #TODO: including faces of cube maps, etc?
 
+GenTextures = _gl.glGenTextures
+GenTextures.argtypes = [GLsizei, POINTER(GLuint)]
+
 def _gen_texture():
-    texture = GLuint() #TODO: GLuint ?
-    _gl.glGenTextures(1, POINTER(texture))
+    texture = GLuint(0)
+    GenTextures(1, texture)
     return texture
 
 class TextureParameter(object):
@@ -83,7 +96,7 @@ class Texture(object):
         _gl.glBindTexture(self._binding, self._texture)
 
 #TODO: make sure data mapping is correct
-_ctypes_data = {
+_data_types = {
                 UNSIGNED_BYTE.value:    POINTER(ctypes.c_uint8),
                 BYTE.value:             POINTER(c_int8),
                 UNSIGNED_SHORT.value:   POINTER(ctypes.c_uint16),
@@ -93,6 +106,9 @@ _ctypes_data = {
                 FLOAT.value:            POINTER(c_float)
                }
                 
+TexImage2D = _gl.glTexImage2D
+TexImage2D.argtypes = [GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, c_void_p]
+
 class TextureImage(object):
     def __init__(self, width, height, data, level=0, storage=RGBA, format=RGBA, border=0):
         self.width = width
@@ -103,19 +119,20 @@ class TextureImage(object):
         self.format = format
         self.border = border
     def submit(self, binding):
-        _gl.glTexImage2D(binding, c_int(self.level),
-                         c_uint(self.storage),
-                         c_uint(self.width), c_uint(self.height),
-                         c_int(self.border),
-                         c_uint(self.format), _data_type[type(self.data)._type_], #TODO: really ok to access _type_ to get element types?
-                         POINTER(self.data)) #FIXME: make pointer out of data
+        TexImage2D(binding, self.level,
+                   self.storage,
+                   self.width, self.height,
+                   self.border,
+                   self.format, _data_types[type(self.data)._type_], #TODO: really ok to access _type_ to get element types?
+                   self.data) #FIXME: make pointer out of data
     
 #TODO: rename class, make Texture2D directly correspond with TEXTURE_2D binding
 class Texture2D(Texture):
+    _binding = TEXTURE_2D
     def __init__(self):
         self._texture = _gen_texture()
+        _check_errors()
         self._unit = None
-        self._binding = TEXTURE_2D
         self._image = None
 
     @property
@@ -127,6 +144,7 @@ class Texture2D(Texture):
             self._bind()
             self._image = image
             self._image.submit(self._binding)
+            _check_errors()
 
     def bind(self, _unit): 
         if self._unit:
@@ -142,10 +160,11 @@ class Texture2D(Texture):
         self._unit = None       
 
 class TexturePlaceholder(Texture):
-    def __init__(self, unit, binding):
+    def __init__(self, unit, binding=None):
         self._unit = unit
         self._texture = 0
-        self._binding = binding
+        if binding:
+            self._binding = binding
     def bind(self):
         self._set_unit(self.unit)
         self._bind()
@@ -153,10 +172,11 @@ class TexturePlaceholder(Texture):
 
 class Textures(object):
     def __init__(self):
-        self._max_texture_units = _get_integer(MAX_TEXTURE_UNITS)
+        self._max_texture_units = max([_get_integer(MAX_TEXTURE_COORDS), _get_integer(MAX_COMBINED_TEXTURE_IMAGE_UNITS)])
         self._textures = [TexturePlaceholder(i)
-                          for i in range(0, self._max_texture_units)
+                          for i in xrange(0, self._max_texture_units)
                          ]
+    def __len__(self): return self._max_texture_units
     def enable(self):
         #FIXME: enable more types?
         #FIXME: require explicit enable? ie: enable_cubemap() etc?

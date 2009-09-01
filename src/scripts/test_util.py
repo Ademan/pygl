@@ -35,57 +35,43 @@ def checkerboard_teximage(w, h, primary=(255, 0, 255), secondary=(0, 0, 0)):
     return image
 
 def draw_plane(quad, normal):
-    #quad.color(
+    s = [-1.0, -1.0, 1.0, 1.0]
+    t = [-1.0, 1.0, 1.0, -1.0]
+
+    def vertex(s, t):
+        i = iter((s, t))
+        quad.vertex([i.next() if x == 0.0 else x for x in normal])
+
     quad.normal(normal)
+    for s, t in zip(s, t):
+        quad.texcoord(s, t)
+        vertex(s, t)
 
 def draw_cube(gl):
-    with gl.quads() as q:
+    with gl.quads() as quad:
         #top
-        q.color(1.0, 1.0, 1.0)
-        q.normal(0.0, 1.0, 0.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(-1.0, 1.0, 1.0)
+        quad.color(1.0, 1.0, 1.0)
+        draw_plane(quad, (0.0, 1.0, 0.0))
 
         #bottom
-        q.normal(0.0, -1.0, 0.0)
-        q.vertex(-1.0, -1.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
-        q.vertex(1.0, -1.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
+        quad.normal(0.0, -1.0, 0.0)
+        draw_plane(quad, (0.0, -1.0, 0.0))
 
         #front
-        q.color(1.0, 0.0, 0.0)
-        q.normal(0.0, 0.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
-        q.vertex(-1.0, 1.0, 1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(1.0, -1.0, 1.0)
+        quad.color(1.0, 0.0, 0.0)
+        draw_plane(quad, (0.0, 0.0, 1.0))
 
         #back
-        q.color(0.0, 1.0, 0.0)
-        q.normal(0.0, 0.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(-1.0, -1.0, -1.0)
+        quad.color(0.0, 1.0, 0.0)
+        draw_plane(quad, (0.0, 0.0, -1.0))
 
         #left
-        q.color(0.0, 0.0, 1.0)
-        q.normal(-1.0, 0.0, 0.0)
-        q.vertex(-1.0, -1.0, -1.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(-1.0, 1.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
+        quad.color(0.0, 0.0, 1.0)
+        draw_plane(quad, (-1.0, 0.0, 0.0))
 
         #right
-        q.color(1.0, 0.0, 1.0)
-        q.normal(1.0, 0.0, 0.0)
-        q.vertex(1.0, -1.0, 1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
+        quad.color(1.0, 0.0, 1.0)
+        draw_plane(quad, (1.0, 0.0, 0.0))
 
 def draw_textured_quad(gl):
     with gl.quads() as q:

@@ -8,7 +8,7 @@ from ctypes import POINTER
 
 from pygl.glerror import _check_errors
 
-def _norm_args(*args):
+def _norm_args(args):
     if len(args) == 1:
         args = args[0]
     return args

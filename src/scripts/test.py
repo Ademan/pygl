@@ -14,6 +14,7 @@ from pygl.constants import LINEAR
 from pygl.constants import NEAREST
 
 from pygl.shader import fixed_function
+from pygl.glerror import _check_errors #FIXME: remove when debug no longer needed
 import pygl
 
 from test_util import Timer, Cycle
@@ -27,8 +28,12 @@ gl = window.context
 per_pixel = create_program(open('pixel.vert'), open('pixel.frag'))
 per_vertex = create_program(open('vertex.vert'), open('vertex.frag'))
 
-programs = Cycle([fixed_function, per_pixel, per_vertex])
-programs.next().use()
+def use_per_pixel():
+    per_pixel.use()
+    per_pixel.uniforms['checkerboard'] = gl.textures[0]
+
+programs = Cycle([lambda: fixed_function.use(), use_per_pixel, lambda: per_vertex.use()])
+programs.next()()
 
 draw_funcs = Cycle([draw_textured_quad, draw_cube])
 draw_function = draw_funcs.next()
@@ -51,7 +56,6 @@ texture.enable()
 
 per_pixel.attribs._dump()
 per_pixel.uniforms._dump()
-#per_pixel.uniforms['checkerboard'] = gl.textures[0]
 
 toggle_texture = Cycle([texture.enable, texture.disable])
 
@@ -66,7 +70,6 @@ while True:
 
     frames += 1
     if seconds.has_elapsed(1.0):
-        print "Time:", time()
         print "FPS:", frames
         frames = 0
 
@@ -74,7 +77,7 @@ while True:
         if event.type == QUIT: exit(0)
         if event.type == KEYDOWN:
             if event.unicode == 's':
-                programs.next().use()
+                programs.next()()
             if event.unicode == 'p':
                 pause = not pause
             if event.unicode == 'd':

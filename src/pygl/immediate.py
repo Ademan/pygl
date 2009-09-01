@@ -13,7 +13,7 @@ from pygl.gltypes import _c_numeric_types
 from pygl.util import _norm_args
 
 #TODO: move me elsewhere!
-def strlist(xs, minsep=', ', majsep='or'):
+def strlist(xs, minsep=', ', majsep='or '):
     last = xs.pop()
     init = xs
     return (minsep + majsep).join([minsep.join(map(str, init)), str(last)])

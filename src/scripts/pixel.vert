@@ -1,7 +1,7 @@
 varying vec3 position;
 varying vec3 normal;
 varying vec3 diffuse;
-//varying vec3 light;
+varying vec2 texcoord;
 
 void main(void)
 {
@@ -11,4 +11,5 @@ void main(void)
 
     gl_Position = ftransform();
     position = gl_Position.xyz;
+    texcoord = gl_MultiTexCoord0.st;
 }

@@ -6,6 +6,7 @@ from pygl.gltypes import GLint, GLuint
 from pygl.gltypes import GLboolean
 from pygl.gltypes import GLchar
 from pygl.gltypes import GLsizei
+from pygl.gltypes import GLfloat, GLdouble
 from pygl.gltypes import NULL
 import pygl
 

@@ -1,13 +1,7 @@
 #! /usr/bin/env python
-from time import clock
 
-import pygame
 from pygame.locals import *
-
-import pygl
-from pygl.shader import VertexShader, FragmentShader, Program
-
-from pygl.constants import DEPTH_TEST
+import pygame
 
 from pygl.glu import Perspective
 from pygl.util import Translate, Rotate, Scale
@@ -15,118 +9,29 @@ from pygl.pygame_context import load_image
 
 from pygl.texture import Texture2D
 
+from pygl.constants import DEPTH_TEST
+from pygl.constants import LINEAR
+from pygl.constants import NEAREST
+
+from pygl.shader import fixed_function
+import pygl
+
+from test_util import Timer, Cycle
+from test_util import create_program, draw_textured_quad, draw_cube
+from test_util import checkerboard_teximage
+
 window = pygl.window.PygameWindow(640, 480)
 
 gl = window.context
 
-texture = Texture2D()
-
-image = load_image('/home/dan/Pictures/test-texture.png')
-
-texture.image = image
-
-def draw_plane(quad, normal):
-    #quad.color(
-    quad.normal(normal)
-
-def draw_cube(gl):
-    with gl.quads() as q:
-        #top
-        q.color(1.0, 1.0, 1.0)
-        q.normal(0.0, 1.0, 0.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(-1.0, 1.0, 1.0)
-
-        #bottom
-        q.normal(0.0, -1.0, 0.0)
-        q.vertex(-1.0, -1.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
-        q.vertex(1.0, -1.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
-
-        #front
-        q.color(1.0, 0.0, 0.0)
-        q.normal(0.0, 0.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
-        q.vertex(-1.0, 1.0, 1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(1.0, -1.0, 1.0)
-
-        #back
-        q.color(0.0, 1.0, 0.0)
-        q.normal(0.0, 0.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(-1.0, -1.0, -1.0)
-
-        #left
-        q.color(0.0, 0.0, 1.0)
-        q.normal(-1.0, 0.0, 0.0)
-        q.vertex(-1.0, -1.0, -1.0)
-        q.vertex(-1.0, 1.0, -1.0)
-        q.vertex(-1.0, 1.0, 1.0)
-        q.vertex(-1.0, -1.0, 1.0)
-
-        #right
-        q.color(1.0, 0.0, 1.0)
-        q.normal(1.0, 0.0, 0.0)
-        q.vertex(1.0, -1.0, 1.0)
-        q.vertex(1.0, 1.0, 1.0)
-        q.vertex(1.0, 1.0, -1.0)
-        q.vertex(1.0, -1.0, -1.0)
-
-class Timer(object):
-    def __init__(self):
-        self._last = clock()
-
-    def elapsed(self):
-        current = clock()
-        elapsed = current - self._last
-        self._last = clock()
-        return elapsed
-
-    def has_elapsed(self, time):
-        current = clock()
-        elapsed = current - self._last
-        if elapsed > time:
-            self._last = clock()
-            return True
-        else:
-            return False
-
-def create_program(vertex_shader, fragment_shader):
-    vs = VertexShader()
-    fs = FragmentShader()
-    program = Program()
-
-    vs.sources = [vertex_shader]
-    fs.sources = [fragment_shader]
-
-    if not vs.compile():
-        print "Vertex Shader log:", vs.log
-
-    if not fs.compile():
-        print "Fragment Shader log:", fs.log
-
-    program.shaders.extend([vs, fs])
-    if not program.link():
-        print "Program log:", program.log
-
-    if not program.validate():
-        print "Invalid"
-
-    return program
-
 per_pixel = create_program(open('pixel.vert'), open('pixel.frag'))
 per_vertex = create_program(open('vertex.vert'), open('vertex.frag'))
-programs = [per_pixel, per_vertex]
-program = per_pixel
 
-if not per_pixel.use():
-    print "Program log:", per_pixel.log
+programs = Cycle([fixed_function, per_pixel, per_vertex])
+programs.next().use()
+
+draw_funcs = Cycle([draw_textured_quad, draw_cube])
+draw_function = draw_funcs.next()
 
 gl.enable(DEPTH_TEST)
 
@@ -136,7 +41,19 @@ with gl.modelview:
     Translate(0.0, 0.0, -10)
     Scale(2.0, 2.0, 2.0)
 
-print "Max Texture Units:", len(gl.textures)
+texture = Texture2D()
+texture.image = checkerboard_teximage(16, 16, primary=(255, 255, 255))
+texture.filter.min = NEAREST
+texture.filter.mag = NEAREST
+
+gl.textures[0] = texture
+texture.enable()
+
+per_pixel.attribs._dump()
+per_pixel.uniforms._dump()
+#per_pixel.uniforms['checkerboard'] = gl.textures[0]
+
+toggle_texture = Cycle([texture.enable, texture.disable])
 
 frames = 0
 time = Timer()
@@ -149,23 +66,27 @@ while True:
 
     frames += 1
     if seconds.has_elapsed(1.0):
-        print "FPS: ", frames
+        print "Time:", time()
+        print "FPS:", frames
         frames = 0
 
     for event in pygame.event.get():
         if event.type == QUIT: exit(0)
         if event.type == KEYDOWN:
             if event.unicode == 's':
-                unused = [p for p in programs if not p is program][0]
-                unused.use()
-                program = unused
+                programs.next().use()
             if event.unicode == 'p':
                 pause = not pause
+            if event.unicode == 'd':
+                draw_function = draw_funcs.next()
+            if event.unicode == 't':
+                toggle_texture.next()()
+            if event.unicode == 'q': exit(0)
 
     if not pause:
         with gl.modelview:
             Rotate(elapsed * 90, 0, 1, 0)
 
-    draw_cube(gl)
+    draw_function(gl)
 
     gl.flip()

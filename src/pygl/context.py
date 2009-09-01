@@ -14,11 +14,7 @@ from pygl.util import _get_integer
 
 from pygl.gltypes import GLenum
 
-Enable = _gl.glEnable
-Enable.argtypes = [GLenum]
-
-Disable = _gl.glDisable
-Disable.argtypes = [GLenum]
+from pygl._gl import Enable, Disable
 
 class Context(object):
     def __init__(self):

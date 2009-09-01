@@ -7,7 +7,8 @@
      - In Progress
     - Vertex Array/Buffer Objects
 - Test programs for different features
-- add test.py to setup.py
+- find command line program to rasterize svg for test texture
++ add test.py to setup.py # not sure if complete/done correctly
 - licensing!
 ? How to handle mapping between OpenGL/C's types and python's types?  For instance a python float maps to an OpenGL/C double, however that (no pun intended) doubles the storage/bandwidth used.  I would like to choose a default and create a sane method for overriding these mappings.
 ? libblas3gf for math routines

@@ -1,10 +1,10 @@
 #FIXME: stop using POINTER(GLchar) except for buffer construction?
-#FIXME: possible if c_str(POINTER((GLchar * size)())) is valid
-from ctypes import c_char_p as c_str
+#FIXME: possible if c_str(POINTER((GLchar * size)())) is valid from ctypes import c_char_p as c_str
 from ctypes import POINTER
 from ctypes import addressof
 from ctypes import create_string_buffer
 from ctypes import cast
+from ctypes import c_char_p as c_str
 
 from pygl.gltypes import GLenum
 from pygl.gltypes import GLint, GLuint
@@ -18,74 +18,11 @@ from pygl.constants import VERTEX_SHADER, FRAGMENT_SHADER
 from pygl._gl import Functionality
 
 from pygl.util import _split_enum_name, _cap_name
+from pygl.util import _lookup_enum
 
 from pygl.glerror import _check_errors
 
-shader = Functionality({
-                      '': {
-                              'CreateShader': ('glCreateShader', [GLenum], GLuint),
-                              'ShaderSource': ('glShaderSource', [GLuint, GLsizei, POINTER(c_str), POINTER(GLuint)], None),  #FIXME: conversion between arrays and pointers in ctypes?
-                              'CompileShader': ('glCompileShader', [GLuint], None),
-                              'DeleteShader' : ('glDeleteShader', [GLuint], None),
-                              'GetShaderiv'    : ('glGetShaderiv', [GLuint, GLenum, POINTER(GLint)], None),
-                              'GetShaderInfoLog': ('glGetShaderInfoLog', [GLuint, GLuint, POINTER(GLuint), c_str], None),
-
-                          },
-#                      'GL_ARB_shader_objects': { #FIXME: find out arb symbols
-#                              'CreateShader': ('glCreateShaderObjectARB'),
-#                              'ShaderSource': ('glShaderSourceARB'),
-#                              'CompileShader': ('glCompileShaderARB', [GLuint], None),
-#                              'DeleteShader' : ('glDeleteShaderARB', [GLuint], None),
-#                              'GetShader'    : ('glGetShaderivARB', [GLuint, GLenum, POINTER(GLint)], None)
-#                                               }                     
-                      })
-
-CreateShader = shader.CreateShader
-ShaderSource = shader.ShaderSource
-CompileShader = shader.CompileShader
-GetShaderiv = shader.GetShaderiv
-GetShaderInfoLog = shader.GetShaderInfoLog
-
-program = Functionality({
-                    '': {
-                            'CreateProgram': ('glCreateProgram', [], GLuint),
-                            'AttachShader':  ('glAttachShader', [GLuint, GLuint], None),
-                            'LinkProgram':   ('glLinkProgram', [GLuint], None),
-                            'ValidateProgram': ('glValidateProgram', [GLuint], None),
-                            'UseProgram':    ('glUseProgram', [GLuint], None),
-                            'DeleteProgram': ('glDeleteProgram', [GLuint], None),
-                            'GetProgramiv':    ('glGetProgramiv', [GLuint, GLenum, POINTER(GLint)], None),
-                            'GetProgramInfoLog': ('glGetProgramInfoLog', [GLuint, GLuint, POINTER(GLuint), c_str], None),
-                            'GetActiveAttrib': ('glGetActiveAttrib', [GLuint, GLuint, GLuint, POINTER(GLuint), POINTER(GLint), POINTER(GLenum), POINTER(GLchar)], None),
-                            'GetActiveUniform': ('glGetActiveUniform', [GLuint, GLuint, GLuint, POINTER(GLuint), POINTER(GLint), POINTER(GLenum), POINTER(GLchar)], None),
-                            #TODO: verify
-                            'GetUniformLocation': ('glGetUniformLocation', [GLuint, c_str], GLuint),
-                            'GetAttribLocation': ('glGetAttribLocation', [GLuint, c_str], GLuint),
-                        },
-                        })
-
-uniform = Functionality({
-                    '': {
-                            'Uniform1i': ('glUniform1i', [GLuint, GLint], None),
-                        }
-                       })
-
-Uniform1i = uniform.Uniform1i
-
-CreateProgram = program.CreateProgram
-AttachShader = program.AttachShader
-LinkProgram = program.LinkProgram
-ValidateProgram = program.ValidateProgram
-UseProgram = program.UseProgram
-DeleteProgram = program.DeleteProgram
-
-GetProgramiv = program.GetProgramiv
-GetProgramInfoLog = program.GetProgramInfoLog
-GetActiveAttrib = program.GetActiveAttrib
-GetAttribLocation = program.GetAttribLocation
-
-GetActiveUniform = program.GetActiveUniform
-GetUniformLocation = program.GetUniformLocation
+from pygl.shader_functions import *
 
 def _get_info_log(getter):
     def _wrapped_get_info_log(self):
@@ -206,14 +143,17 @@ class AttachedShaders(object):
                      shader._object)
         _check_errors()
 
+    def __iter__(self): return iter(self._shaders)
+
 class ProgramVariable(object):
-    def __init__(self, location, type, size):
-        self._location = location
+    def __init__(self, name, type, size, location):
+        self._name = name
         self._type = type
         self._size = size
+        self._location = location
 
 class Sampler(ProgramVariable):
-    def _set(self, value):
+    def set(self, value):
         try:
             Uniform1i(self._location, value._unit)
         except AttributeError:
@@ -234,6 +174,11 @@ _names = {float: "FLOAT",
           int:   "INT",
           bool:  "BOOL"}
 
+_sampler_types = (getattr(pygl.constants, '_'.join(['SAMPLER', suffix])).value for suffix in (
+                                                    '1D', '2D', '3D',
+                                                    'CUBE', '1D_SHADOW', '2D_SHADOW')
+                                                    )
+
 _variable_types = {}
 for type, sizes in _numeric_variable_types.iteritems():
     for size in sizes:
@@ -245,9 +190,14 @@ for type, sizes in _numeric_variable_types.iteritems():
                                                       'type': 'VEC' if size[0] == 1 else 'MAT',
                                                       'size': size[1]
                                                      }
+
         constant = getattr(pygl.constants, constant_name).value
-        #FIXME
-        #_variable_types[constant] = ProgramVariable(type, size)
+
+        #   _variable_types[constant] = ProgramVariable(type, size)
+
+# fill in shader types
+for type in _sampler_types:
+    _variable_types[type] = Sampler
 
 class ProgramVariables(object):
     #FIXME: other types exist (nonsquare matrices)
@@ -280,29 +230,35 @@ class ProgramVariables(object):
         return name.value, type, attrib_size.value
 
     def _dump(self):
-        for name, info in self._variables.iteritems():
+        for name, info in self._variable_info.iteritems():
             print "%s:" % name
-            print "\ttype: %d" % info[0].value
+            print "\ttype: %d (%s)" % (info[0].value, _lookup_enum(info[0])[0])
             print "\tsize: %d" % info[1]
             print "\tlocation: %d" % info[2]
 
     def _get_all(self):
-        self._variables = {}
+        self._variable_info = {}
         for index in xrange(0, self._get_variable_count()):
             name, type, size = self._get_info(index)
-            self._variables[name] = (type, size,
-                                     self._get_location(self._program._object, c_str(name))) #TODO: c_str necessary?
+            self._variable_info[name] = (type, size,
+                                         self._get_location(self._program._object, c_str(name))) #TODO: c_str necessary?
+
+            self._variables = [None] * len(self._variable_info)
+
+        for name, (type, size, location) in self._variable_info.iteritems():
+            try:
+                self._variables[location] = _variable_types[type.value](name, type, size, location)
+            except KeyError: pass #FIXME: only samplers implemented! Shouldn't need this guard!
 
     def __getitem__(self, name): pass #TODO: getuniform/getattrib
 
-    def _set_variable(self, location, value): pass
-        #TODO: how to handle this?!?
+        #TODO: how to handle setting?!?
         #TODO: check for _n _m and _data?
         #TODO: seems a bit magical, but would make everything easier to use
 
     def __setitem__(self, name, value):
-        location = self._variables[name][2]
-        self._set_variable(location, value)
+        location = self._variable_info[name][2]
+        self._variables[location].set(value)
 
 class ProgramAttributes(ProgramVariables):
     _get_variable = GetActiveAttrib
@@ -331,7 +287,6 @@ class Program(object):
     def __init__(self):
         self._object = CreateProgram()
         self._shaders = AttachedShaders(self)
-        _add_properties(self, GetProgramiv, _program_properties)
 
     def link(self):
         LinkProgram(self._object)
@@ -358,3 +313,8 @@ class Program(object):
     @property
     def shaders(self):
         return self._shaders
+
+class FixedFunction(object):
+    def use(self): UseProgram(0)
+
+fixed_function = FixedFunction()

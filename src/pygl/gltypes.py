@@ -1,5 +1,6 @@
 from ctypes import c_uint32 as GLenum
 
+from ctypes import c_uint8 as GLboolean
 from ctypes import c_int8 as GLbyte
 from ctypes import c_uint8 as GLubyte
 

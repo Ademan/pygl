@@ -8,5 +8,6 @@ setup(
     author = 'Daniel Roberts',
     author_email = 'Ademan555@gmail.com',
     packages = find_packages('src'),
-    package_dir = {'': 'src'}
+    package_dir = {'': 'src'},
+    scripts = [path.join('src', 'scripts', script) for script in ['test.py']] #FIXME: no scriptdir etc?
      )

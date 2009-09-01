@@ -3,6 +3,7 @@ from ctypes.util import find_library
 from ctypes import c_char_p
 
 from sys import platform
+from os import environ
 
 from pygl.constants import EXTENSIONS
 from pygl.gltypes import GLenum
@@ -10,9 +11,18 @@ from pygl.gltypes import GLenum
 lib = None
 
 if 'linux' in platform:
-    lib = CDLL(find_library('GL'))
+    if 'USE_BUGLE' in environ:
+        lib = CDLL(find_library('libbugle.so')) #FIXME: debug
+    else:
+        lib = CDLL(find_library('GL'))
 elif platform == 'win32':
     raise RuntimeError('No')
+
+Enable = lib.glEnable
+Enable.argtypes = [GLenum]
+
+Disable = lib.glDisable
+Disable.argtypes = [GLenum]
 
 GetString = lib.glGetString
 GetString.argtypes = [GLenum]

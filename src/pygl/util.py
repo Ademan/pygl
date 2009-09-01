@@ -40,3 +40,21 @@ Translate.argtypes = [GLdouble] * 3
 
 Scale = _gl.glScaled
 Scale.argtypes = [GLdouble] * 3
+
+def _lookup_enum(value):
+    from pygl import constants
+    try:
+        value = value.value
+    except AttributeError: pass
+
+    results = []
+    try:
+        for constant in dir(constants):
+            if getattr(constants, constant).value == value:
+                results.append(constant)
+    except: pass
+
+    return results[0] if len(results) == 1 else results
+
+def _debug_enum(name, value):
+    print "%s:" % name, ' = '.join(map(str, [_lookup_enum(value), value.value]))

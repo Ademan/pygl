@@ -1,12 +1,13 @@
-from pygl._gl import lib as _gl
-
 import ctypes
 from ctypes import c_uint, POINTER
 from ctypes import c_int8, c_int16, c_int32
 from ctypes import c_uint8, c_uint16, c_uint32
 from ctypes import c_float
 from ctypes import c_void_p
+from ctypes import cast
+from ctypes import byref
 
+from pygl._gl import lib as _gl
 from pygl.gltypes import GLenum, GLuint
 
 from pygl.constants import TEXTURE_MIN_FILTER, TEXTURE_MAG_FILTER
@@ -20,16 +21,25 @@ from pygl.constants import UNSIGNED_SHORT, SHORT
 from pygl.constants import UNSIGNED_INT, INT
 from pygl.constants import FLOAT
 
-from pygl.constants import RGBA as RGBA
+from pygl.constants import RGBA
 
 from pygl.util import _get_integer
+from pygl.util import _debug_enum
 
 from pygl.glerror import _check_errors
 
-from pygl.gltypes import GLsizei, GLuint
-from pygl.gltypes import GLint
+from pygl.gltypes import GLsizei
+from pygl.gltypes import GLushort, GLshort
+from pygl.gltypes import GLuint, GLint
+from pygl.gltypes import GLubyte, GLbyte
+from pygl.gltypes import GLchar
+from pygl.gltypes import GLfloat
 
 from pygl.state import PreserveTextureBinding
+
+from pygl._gl import Enable, Disable
+
+from pygl.state import BindTexture
 
 #TODO: make TextureImage class or something to generically handle 2d texture images?
 #TODO: including faces of cube maps, etc?
@@ -42,6 +52,12 @@ def _gen_texture():
     GenTextures(1, texture)
     return texture
 
+TexParameter = _gl.glTexParameteri
+TexParameter.argtypes = [GLenum, GLenum, GLint]
+
+GetTexParameter = _gl.glGetTexParameteriv
+GetTexParameter.argtypes = [GLenum, GLenum, POINTER(GLint)]
+
 class TextureParameter(object):
     def __init__(self, parameter):
         self._parameter = parameter
@@ -51,16 +67,17 @@ class TextureParameter(object):
 
     def __get__(self, instance, owner):
         texture = self._get_texture(instance)
-        result = GLuint(0)
+        result = GLint(0)
         with PreserveTextureBinding(texture):
-            _gl.glGetTexParameteriv(texture._binding, self._parameter, POINTER(result))
+            _gl.glGetTexParameteriv(texture._binding, self._parameter, result)
         return result.value
 
     def __set__(self, instance, value):
         texture = self._get_texture(instance)
-        with PreserveTextureBinding(texture._binding) as binding:
-            binding.state = texture.texture #FIXME: binding.state ? clean enough?
-            _gl.glTexParameteri(self._parameter, GLuint(value))
+        with PreserveTextureBinding(texture) as binding:
+            binding.state = texture._texture #FIXME: binding.state ? clean enough?
+            TexParameter(texture._binding, self._parameter, value.value) #FIXME: what if it's not a GLenum?
+            _check_errors()
 
 class NestedTextureParameter(TextureParameter):
     def _get_texture(self, instance):
@@ -78,53 +95,71 @@ class WrapMode(object):
     def __init__(self, texture):
         self._texture = texture
 
+ActiveTexture = _gl.glActiveTexture
+ActiveTexture.argtypes = [GLenum]
+
 class Texture(object):
-    def __init__(self):
-        self.filter = Filter(self)
-        self.wrap = WrapMode(self)
-    def _unit_enum(self):
-        return c_uint(TEXTURE0 + self._unit)
+    @property
+    def unit(self):
+        return GLenum(TEXTURE0.value + self._unit)
 
-    def enable(self):  _gl.glEnable(self._unit_enum())
-    def disable(self): _gl.glDisable(self._unit_enum())
+    #FIXME: probably bad
+    @unit.setter
+    def unit(self, unit):
+        self._unit = unit
+        self._set_unit()
 
-    def _set_unit(self, unit):
-        self._unit = _unit
-        _gl.glActiveTexture(self._unit_enum())
+    def enable(self):
+        self._set_unit()
+        _check_errors()
+        Enable(self._binding)
+        _check_errors()       #FIXME: check after everything?
+
+    def disable(self):
+        self._set_unit()
+        _check_errors()
+        Disable(self._binding)
+        _check_errors()
+
+    def _set_unit(self):
+        ActiveTexture(self.unit)
+        _check_errors()
 
     def _bind(self):
-        _gl.glBindTexture(self._binding, self._texture)
+        BindTexture(self._binding, self._texture)
 
 #TODO: make sure data mapping is correct
 _data_types = {
-                UNSIGNED_BYTE.value:    POINTER(ctypes.c_uint8),
-                BYTE.value:             POINTER(c_int8),
-                UNSIGNED_SHORT.value:   POINTER(ctypes.c_uint16),
-                SHORT.value:            POINTER(ctypes.c_int16),
-                UNSIGNED_INT.value:     POINTER(ctypes.c_uint32),
-                INT.value:              POINTER(ctypes.c_int32),
-                FLOAT.value:            POINTER(c_float)
+                GLubyte:   UNSIGNED_BYTE,
+                GLbyte:    BYTE,
+                GLchar:    BYTE,
+                GLushort:  UNSIGNED_SHORT,
+                GLshort:   SHORT,
+                GLuint:    UNSIGNED_INT,
+                GLint:     INT,
+                GLfloat:   FLOAT
                }
                 
 TexImage2D = _gl.glTexImage2D
 TexImage2D.argtypes = [GLenum, GLint, GLint, GLsizei, GLsizei, GLint, GLenum, GLenum, c_void_p]
 
+GetTexImage = _gl.glGetTexImage
+GetTexImage.argtypes = [GLenum, GLint, GLenum, GLenum, c_void_p]
+
 class TextureImage(object):
-    def __init__(self, width, height, data, level=0, storage=RGBA, format=RGBA, border=0):
-        self.width = width
-        self.height = height
-        self.data = data
-        self.level = level
-        self.storage = storage
-        self.format = format
-        self.border = border
+    def _infer_type(self):
+        return self._type if hasattr(self, "_type") else _data_types[type(self.data)._type_] #TODO: really ok to access _type_ to get element types?
     def submit(self, binding):
         TexImage2D(binding, self.level,
-                   self.storage,
+                   self.storage.value, #FIXME: HACK! why does the spec want an int anyways?
                    self.width, self.height,
                    self.border,
-                   self.format, _data_types[type(self.data)._type_], #TODO: really ok to access _type_ to get element types?
-                   self.data) #FIXME: make pointer out of data
+                   self.format, self.type,
+                   cast(self.data, c_void_p)
+                   #c_void_p(self.data)
+                   #byref(self.data)
+                   #self.data.raw
+                   ) #FIXME: make pointer out of data
     
 #TODO: rename class, make Texture2D directly correspond with TEXTURE_2D binding
 class Texture2D(Texture):
@@ -134,6 +169,8 @@ class Texture2D(Texture):
         _check_errors()
         self._unit = None
         self._image = None
+        self.filter = Filter(self)
+        self.wrap = WrapMode(self)
 
     @property
     def image(self): return self._image
@@ -142,31 +179,23 @@ class Texture2D(Texture):
     def image(self, image):
         with PreserveTextureBinding(self):
             self._bind()
+            _check_errors()
             self._image = image
             self._image.submit(self._binding)
             _check_errors()
 
-    def bind(self, _unit): 
-        if self._unit:
-            self.unbind() #TODO: any reason why you *couldn't* bind the same texture to multiple _units?
-                          #TODO: reasons why you *shouldn't* are probably abundant though
-        self._set_unit(_unit)
+    def bind(self, unit): 
+        self.unit = unit
         self._bind()
 
-    #FIXME: remove?
-    def unbind(self):
-        _gl.glActiveTexture(self._unit_enum())
-        _gl.glBindTexture(self._binding, GLuint(0))
-        self._unit = None       
-
 class TexturePlaceholder(Texture):
+    _texture = 0
     def __init__(self, unit, binding=None):
         self._unit = unit
-        self._texture = 0
         if binding:
             self._binding = binding
     def bind(self):
-        self._set_unit(self.unit)
+        self._set_unit()
         self._bind()
         del self._binding #should get rid of _binding attr so that future placeholders won't do useless work
 
@@ -176,24 +205,26 @@ class Textures(object):
         self._textures = [TexturePlaceholder(i)
                           for i in xrange(0, self._max_texture_units)
                          ]
+
     def __len__(self): return self._max_texture_units
-    def enable(self):
-        #FIXME: enable more types?
-        #FIXME: require explicit enable? ie: enable_cubemap() etc?
-        #TODO: does this affect programmable pipeline?
-        _gl.glEnable(TEXTURE_2D)
 
     def __getitem__(self, index):
         return self._textures[index]
 
     def __setitem__(self, index, value):
         if value is None:
-            try:
-                binding = self._textures[index]._binding
-                self._textures[index] = TexturePlaceholder(index, binding)
-            except AttributeError:
-                self._textures[index] = TexturePlaceholder(index, None)
+            del self[index]
+            return
         else:
             self._textures[index] = value
+
+        self._textures[index].bind(index)
+
+    def __delitem__(self, index):
+        try:
+            binding = self._textures[index]._binding
+            self._textures[index] = TexturePlaceholder(index, binding)
+        except AttributeError:
+            self._textures[index] = TexturePlaceholder(index, None)
 
         self._textures[index].bind(index)

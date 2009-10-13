@@ -52,7 +52,6 @@ texture.filter.min = NEAREST
 texture.filter.mag = NEAREST
 
 gl.textures[0] = texture
-texture.enable()
 
 per_pixel.attribs._dump()
 per_pixel.uniforms._dump()

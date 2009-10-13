@@ -34,6 +34,8 @@ def checkerboard_teximage(w, h, primary=(255, 0, 255), secondary=(0, 0, 0)):
 
     return image
 
+#FIXME: only consistently wrapped for positive normals!
+#FIXME: (except z?...) Egh, don't wanna special case this..
 def draw_plane(quad, normal):
     s = [-1.0, -1.0, 1.0, 1.0]
     t = [-1.0, 1.0, 1.0, -1.0]

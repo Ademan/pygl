@@ -152,6 +152,9 @@ class ProgramVariable(object):
         self._size = size
         self._location = location
 
+class Attribute(ProgramVariable):
+    def __call__(self, *args): pass
+
 class Sampler(ProgramVariable):
     def set(self, value):
         try:
@@ -159,39 +162,49 @@ class Sampler(ProgramVariable):
         except AttributeError:
             Uniform1i(self._location, GLuint(value))
 
-class Attribute(ProgramVariable):
-    def __call__(self, *args): pass
-
-#FIXME: what represents the "preferred" vector? 1x3 or 3x1?
-#FIXME: or does opengl switch between column and row vectors
-#FIXME: as needed?
-_numeric_variable_types = {float: [(1,1), (1, 2), (1,3), (1,4),
-                           (2,2), (3, 3), (4,4)],
-                   int:   [(1,1), (1, 2), (1,3), (1,4)],
-                   bool:  [(1,1), (1, 2), (1,3), (1,4)]}
-
-_names = {float: "FLOAT",
-          int:   "INT",
-          bool:  "BOOL"}
-
+# Generate the names of sampler uniform constants
 _sampler_types = (getattr(pygl.constants, '_'.join(['SAMPLER', suffix])).value for suffix in (
                                                     '1D', '2D', '3D',
                                                     'CUBE', '1D_SHADOW', '2D_SHADOW')
                                                     )
 
+#FIXME: what represents the "preferred" vector? 1x3 or 3x1?
+#FIXME: or does opengl switch between column and row vectors
+#FIXME: as needed?
+_numeric_variable_types = {
+                   float: [(1, 1), (1, 2), (1, 3), (1, 4),
+                           (2, 2), (3, 3), (4, 4),
+                           (2, 3), (2, 4), # nonsquare
+                           (3, 2), (3, 4), # nonsquare
+                           (4, 2), (4, 3)],# nonsquare
+                   int:   [(1, 1), (1, 2), (1, 3), (1, 4)],
+                   bool:  [(1, 1), (1, 2), (1, 3), (1, 4)]
+                   }
+
+_type_names = {float: "FLOAT",
+          int:   "INT",
+          bool:  "BOOL"}
+
 _variable_types = {}
 for type, sizes in _numeric_variable_types.iteritems():
     for size in sizes:
-        if size[1] == 1:
-            constant_name = _names[type]
-        else:
-            constant_name = "%(name)s_%(type)s%(size)d" % {
-                                                      'name': _names[type],
-                                                      'type': 'VEC' if size[0] == 1 else 'MAT',
+        if size[0] == size[1] == 1:
+            constant_name = _type_names[type]
+        elif size[0] == 1:
+            constant_name = "%(name)s_VEC%(size)d" % {
+                                                      'name': _type_names[type],
                                                       'size': size[1]
                                                      }
+        else:
+            constant_name = "%(name)s_MAT%(size)s" % {
+                                                      'name': _type_names[type],
+                                                      'size': str(size[1]) if size[0] == size[1] else '%dx%d' % size
+                                                     }
 
+        # lookup constant value
         constant = getattr(pygl.constants, constant_name).value
+
+        print "%s: %d" % (constant_name, constant)
 
         #   _variable_types[constant] = ProgramVariable(type, size)
 
@@ -200,17 +213,10 @@ for type in _sampler_types:
     _variable_types[type] = Sampler
 
 class ProgramVariables(object):
-    #FIXME: other types exist (nonsquare matrices)
-    _variable_types = ['FLOAT', 'FLOAT_VEC2', 'FLOAT_VEC3', 'FLOAT_VEC4',
-                       'INT', 'INT_VEC2', 'INT_VEC3', 'INT_VEC4',
-                       'BOOL', 'BOOL_VEC2', 'BOOL_VEC3', 'BOOL_VEC4',
-                       'FLOAT_MAT2', 'FLOAT_MAT3', 'FLOAT_MAT4',
-                       'SAMPLER_1D', 'SAMPLER_2D', 'SAMPLER_3D',
-                       'SAMPLER_CUBE',
-                       'SAMPLER_1D_SHADOW', 'SAMPLER_2D_SHADOW']
     def __init__(self, program):
         self._program = program
         self._get_all()
+
     def _get_info(self, index):
         namelen = GLsizei(0)
         attrib_size = GLint(0)
